@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huodongpai.mapper.StatisticsMapper">
+
+    <select id="selectDashboard" resultType="com.huodongpai.vo.statistics.DashboardVO">
+        SELECT
+            COUNT(*) AS totalEvents,
+            COALESCE(SUM(signup_count), 0) AS totalSignupCount,
+            COALESCE(SUM(approved_count), 0) AS totalApprovedCount,
+            COALESCE(SUM(checkin_count), 0) AS totalCheckinCount
+        FROM event_info
+    </select>
+
+    <select id="selectHotEvents" resultType="com.huodongpai.vo.statistics.HotEventVO">
+        SELECT
+            e.id AS eventId,
+            e.title,
+            c.category_name AS categoryName,
+            e.location,
+            e.start_time AS startTime,
+            e.signup_count AS signupCount,
+            e.approved_count AS approvedCount,
+            e.checkin_count AS checkinCount
+        FROM event_info e
+        LEFT JOIN event_category c ON c.id = e.category_id
+        ORDER BY e.signup_count DESC, e.checkin_count DESC, e.start_time DESC, e.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectSignupTrend" resultType="com.huodongpai.vo.statistics.SignupTrendVO">
+        SELECT
+            DATE_FORMAT(operation_time, '%Y-%m-%d') AS date,
+            COUNT(*) AS signupCount
+        FROM event_signup_log
+        WHERE operation_type = 'apply'
+          AND operation_time &gt;= #{startTime}
+        GROUP BY DATE_FORMAT(operation_time, '%Y-%m-%d')
+        ORDER BY date ASC
+    </select>
+</mapper>

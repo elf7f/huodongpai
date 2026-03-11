@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huodongpai.mapper.EventSignupMapper">
+
+    <sql id="runtimeStatusExpr">
+        CASE
+            WHEN e.status = 'draft' THEN 'draft'
+            WHEN e.status = 'cancelled' THEN 'cancelled'
+            WHEN NOW() &lt; e.signup_deadline THEN 'signup_open'
+            WHEN NOW() &gt;= e.signup_deadline AND NOW() &lt; e.start_time THEN 'signup_closed'
+            WHEN NOW() &gt;= e.start_time AND NOW() &lt; e.end_time THEN 'ongoing'
+            ELSE 'finished'
+        END
+    </sql>
+
+    <select id="selectMyPage" resultType="com.huodongpai.vo.signup.MySignupPageVO">
+        SELECT
+            s.id AS signupId,
+            s.event_id AS eventId,
+            e.title AS eventTitle,
+            e.cover_url AS coverUrl,
+            e.location,
+            e.start_time AS startTime,
+            e.end_time AS endTime,
+            e.signup_deadline AS signupDeadline,
+            e.need_audit AS needAudit,
+            s.status,
+            s.signup_time AS signupTime,
+            s.audit_time AS auditTime,
+            s.cancel_time AS cancelTime,
+            IFNULL(c.checkin_status, 0) AS checkinStatus,
+            c.checkin_time AS checkinTime,
+            <include refid="runtimeStatusExpr"/> AS runtimeStatus
+        FROM event_signup s
+        INNER JOIN event_info e ON e.id = s.event_id
+        LEFT JOIN event_checkin c ON c.signup_id = s.id
+        WHERE s.user_id = #{userId}
+        <if test="query.status != null and query.status != ''">
+            AND s.status = #{query.status}
+        </if>
+        <if test="query.keyword != null and query.keyword != ''">
+            AND e.title LIKE CONCAT('%', #{query.keyword}, '%')
+        </if>
+        ORDER BY s.signup_time DESC, s.id DESC
+    </select>
+
+    <select id="selectAdminPage" resultType="com.huodongpai.vo.signup.SignupAdminPageVO">
+        SELECT
+            s.id AS signupId,
+            s.event_id AS eventId,
+            e.title AS eventTitle,
+            s.user_id AS userId,
+            u.username,
+            u.real_name AS realName,
+            u.phone,
+            s.status,
+            s.remark,
+            s.signup_time AS signupTime,
+            s.audit_time AS auditTime,
+            s.cancel_time AS cancelTime,
+            s.audit_by AS auditBy,
+            au.real_name AS auditByName,
+            IFNULL(c.checkin_status, 0) AS checkinStatus,
+            c.checkin_time AS checkinTime
+        FROM event_signup s
+        INNER JOIN event_info e ON e.id = s.event_id
+        INNER JOIN sys_user u ON u.id = s.user_id
+        LEFT JOIN sys_user au ON au.id = s.audit_by
+        LEFT JOIN event_checkin c ON c.signup_id = s.id
+        <where>
+            <if test="query.eventId != null">
+                AND s.event_id = #{query.eventId}
+            </if>
+            <if test="query.status != null and query.status != ''">
+                AND s.status = #{query.status}
+            </if>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (
+                    e.title LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR u.username LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR u.real_name LIKE CONCAT('%', #{query.keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY s.signup_time DESC, s.id DESC
+    </select>
+</mapper>

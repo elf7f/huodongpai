@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huodongpai.mapper.EventCheckinMapper">
+
+    <select id="selectPage" resultType="com.huodongpai.vo.checkin.CheckinPageVO">
+        SELECT
+            s.id AS signupId,
+            s.event_id AS eventId,
+            e.title AS eventTitle,
+            s.user_id AS userId,
+            u.username,
+            u.real_name AS realName,
+            u.phone,
+            e.start_time AS startTime,
+            e.end_time AS endTime,
+            s.signup_time AS signupTime,
+            s.audit_time AS auditTime,
+            IFNULL(c.checkin_status, 0) AS checkinStatus,
+            c.checkin_time AS checkinTime
+        FROM event_signup s
+        INNER JOIN event_info e ON e.id = s.event_id
+        INNER JOIN sys_user u ON u.id = s.user_id
+        LEFT JOIN event_checkin c ON c.signup_id = s.id
+        <where>
+            s.status = 'approved'
+            <if test="query.eventId != null">
+                AND s.event_id = #{query.eventId}
+            </if>
+            <if test="query.keyword != null and query.keyword != ''">
+                AND (
+                    e.title LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR u.username LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR u.real_name LIKE CONCAT('%', #{query.keyword}, '%')
+                )
+            </if>
+            <if test="query.checkinStatus != null and query.checkinStatus == 1">
+                AND c.checkin_status = 1
+            </if>
+            <if test="query.checkinStatus != null and query.checkinStatus == 0">
+                AND (c.id IS NULL OR c.checkin_status = 0)
+            </if>
+        </where>
+        ORDER BY e.start_time DESC, s.id DESC
+    </select>
+</mapper>

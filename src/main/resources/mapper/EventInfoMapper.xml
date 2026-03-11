@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huodongpai.mapper.EventInfoMapper">
+
+    <sql id="runtimeStatusExpr">
+        CASE
+            WHEN e.status = 'draft' THEN 'draft'
+            WHEN e.status = 'cancelled' THEN 'cancelled'
+            WHEN NOW() &lt; e.signup_deadline THEN 'signup_open'
+            WHEN NOW() &gt;= e.signup_deadline AND NOW() &lt; e.start_time THEN 'signup_closed'
+            WHEN NOW() &gt;= e.start_time AND NOW() &lt; e.end_time THEN 'ongoing'
+            ELSE 'finished'
+        END
+    </sql>
+
+    <select id="selectPublicPage" resultType="com.huodongpai.vo.event.EventPageVO">
+        SELECT
+            e.id,
+            e.category_id AS categoryId,
+            c.category_name AS categoryName,
+            e.title,
+            e.cover_url AS coverUrl,
+            e.location,
+            e.start_time AS startTime,
+            e.end_time AS endTime,
+            e.signup_deadline AS signupDeadline,
+            e.max_participants AS maxParticipants,
+            e.need_audit AS needAudit,
+            e.status AS baseStatus,
+            <include refid="runtimeStatusExpr"/> AS runtimeStatus,
+            e.signup_count AS signupCount,
+            e.approved_count AS approvedCount,
+            e.checkin_count AS checkinCount,
+            (e.max_participants - e.signup_count) AS remainingSlots
+        FROM event_info e
+        LEFT JOIN event_category c ON c.id = e.category_id
+        <where>
+            e.status = 'published'
+            <if test="query.title != null and query.title != ''">
+                AND e.title LIKE CONCAT('%', #{query.title}, '%')
+            </if>
+            <if test="query.categoryId != null">
+                AND e.category_id = #{query.categoryId}
+            </if>
+            <if test="query.runtimeStatus != null and query.runtimeStatus != ''">
+                AND <include refid="runtimeStatusExpr"/> = #{query.runtimeStatus}
+            </if>
+        </where>
+        ORDER BY e.start_time DESC, e.id DESC
+    </select>
+
+    <select id="selectManagePage" resultType="com.huodongpai.vo.event.EventPageVO">
+        SELECT
+            e.id,
+            e.category_id AS categoryId,
+            c.category_name AS categoryName,
+            e.title,
+            e.cover_url AS coverUrl,
+            e.location,
+            e.start_time AS startTime,
+            e.end_time AS endTime,
+            e.signup_deadline AS signupDeadline,
+            e.max_participants AS maxParticipants,
+            e.need_audit AS needAudit,
+            e.status AS baseStatus,
+            <include refid="runtimeStatusExpr"/> AS runtimeStatus,
+            e.signup_count AS signupCount,
+            e.approved_count AS approvedCount,
+            e.checkin_count AS checkinCount,
+            (e.max_participants - e.signup_count) AS remainingSlots
+        FROM event_info e
+        LEFT JOIN event_category c ON c.id = e.category_id
+        <where>
+            <if test="query.title != null and query.title != ''">
+                AND e.title LIKE CONCAT('%', #{query.title}, '%')
+            </if>
+            <if test="query.categoryId != null">
+                AND e.category_id = #{query.categoryId}
+            </if>
+            <if test="query.baseStatus != null and query.baseStatus != ''">
+                AND e.status = #{query.baseStatus}
+            </if>
+            <if test="query.runtimeStatus != null and query.runtimeStatus != ''">
+                AND <include refid="runtimeStatusExpr"/> = #{query.runtimeStatus}
+            </if>
+        </where>
+        ORDER BY e.create_time DESC, e.id DESC
+    </select>
+
+    <select id="selectDetailById" resultType="com.huodongpai.vo.event.EventDetailVO">
+        SELECT
+            e.id,
+            e.category_id AS categoryId,
+            c.category_name AS categoryName,
+            e.title,
+            e.cover_url AS coverUrl,
+            e.location,
+            e.start_time AS startTime,
+            e.end_time AS endTime,
+            e.signup_deadline AS signupDeadline,
+            e.max_participants AS maxParticipants,
+            e.need_audit AS needAudit,
+            e.status AS baseStatus,
+            <include refid="runtimeStatusExpr"/> AS runtimeStatus,
+            e.signup_count AS signupCount,
+            e.approved_count AS approvedCount,
+            e.checkin_count AS checkinCount,
+            (e.max_participants - e.signup_count) AS remainingSlots,
+            e.description
+        FROM event_info e
+        LEFT JOIN event_category c ON c.id = e.category_id
+        WHERE e.id = #{eventId}
+        LIMIT 1
+    </select>
+</mapper>

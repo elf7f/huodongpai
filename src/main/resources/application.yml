@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: huodongpai
+  datasource:
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:huodongpai}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5s
+
+server:
+  port: ${SERVER_PORT:8080}
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+  global-config:
+    banner: false
+
+logging:
+  level:
+    com.huodongpai.mapper: debug
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:huodongpai-jwt-secret-key-please-change-2026}
+    expire-hours: ${JWT_EXPIRE_HOURS:24}
+    header-name: ${JWT_HEADER_NAME:Authorization}
+    token-prefix: ${JWT_TOKEN_PREFIX:Bearer }
