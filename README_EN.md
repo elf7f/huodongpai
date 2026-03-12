@@ -149,12 +149,6 @@ docker compose down -v
 docker compose up -d
 ```
 
-If the old database already contains garbled values such as `ç³»ç»Ÿç®¡ç†å‘˜`, run:
-
-```bash
-mysql -uroot -p123456 huodongpai < sql/03_huodongpai_fix_seed_utf8.sql
-```
-
 ### 4. Start the Backend
 
 ```bash

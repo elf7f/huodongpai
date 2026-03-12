@@ -151,12 +151,6 @@ docker compose down -v
 docker compose up -d
 ```
 
-如果旧库里已经出现 `ç³»ç»Ÿç®¡ç†å‘˜` 这类乱码，可直接执行修复脚本：
-
-```bash
-mysql -uroot -p123456 huodongpai < sql/03_huodongpai_fix_seed_utf8.sql
-```
-
 ### 4. 启动后端
 
 ```bash

@@ -40,12 +40,6 @@ const routes = [
         meta: { title: '我的报名' }
       },
       {
-        path: 'record',
-        name: 'record',
-        component: () => import('@/views/record/RecordView.vue'),
-        meta: { title: '我的报名' }
-      },
-      {
         path: 'event-manage',
         name: 'event-manage',
         component: () => import('@/views/event/EventManageView.vue'),
