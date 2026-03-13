@@ -23,6 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/user")
 @RequireRole(UserRoleEnum.ADMIN)
+/**
+ * 用户管理接口。
+ * 仅管理员可访问，用于系统用户分页查询、新增、编辑和启停。
+ */
 public class UserController {
 
     private final UserService userService;
@@ -31,22 +35,34 @@ public class UserController {
         this.userService = userService;
     }
 
+    /**
+     * 用户分页查询。
+     */
     @GetMapping("/page")
     public ApiResponse<PageResponse<UserPageVO>> page(@Valid UserPageQueryDTO queryDTO) {
         return ApiResponse.success(userService.getPage(queryDTO));
     }
 
+    /**
+     * 新增用户。
+     */
     @PostMapping("/add")
     public ApiResponse<Long> add(@Valid @RequestBody UserAddDTO addDTO) {
         return ApiResponse.success(userService.add(addDTO, UserContextHolder.getRequired().getId()));
     }
 
+    /**
+     * 编辑用户。
+     */
     @PutMapping("/update")
     public ApiResponse<Void> update(@Valid @RequestBody UserUpdateDTO updateDTO) {
         userService.update(updateDTO, UserContextHolder.getRequired().getId());
         return ApiResponse.success();
     }
 
+    /**
+     * 修改用户启用/禁用状态。
+     */
     @PutMapping("/status/{id}")
     public ApiResponse<Void> updateStatus(@PathVariable("id") Long id,
                                           @Valid @RequestBody UserStatusUpdateDTO updateDTO) {

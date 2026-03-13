@@ -8,6 +8,11 @@ public final class EventCounterHelper {
     private EventCounterHelper() {
     }
 
+    /**
+     * 对活动统计字段应用增量。
+     * 这里集中校验统计字段的上下界和三者之间的大小关系：
+     * signup_count >= approved_count >= checkin_count。
+     */
     public static void applyDelta(EventInfo eventInfo, int signupDelta, int approvedDelta, int checkinDelta) {
         int newSignupCount = eventInfo.getSignupCount() + signupDelta;
         int newApprovedCount = eventInfo.getApprovedCount() + approvedDelta;

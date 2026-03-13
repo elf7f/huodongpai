@@ -10,6 +10,10 @@ public final class CheckinConverter {
     private CheckinConverter() {
     }
 
+    /**
+     * 报名记录转签到实体。
+     * 签到表只记录“签到成功事实”，因此在真正签到时才创建实体。
+     */
     public static EventCheckin toEntity(EventSignup signup, LocalDateTime checkinTime) {
         EventCheckin eventCheckin = new EventCheckin();
         eventCheckin.setEventId(signup.getEventId());

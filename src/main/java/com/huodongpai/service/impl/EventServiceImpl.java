@@ -24,6 +24,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+/**
+ * 活动服务实现。
+ * 负责活动的查询、详情、新增、编辑、发布、取消和删除。
+ */
 public class EventServiceImpl implements EventService {
 
     private final EventInfoMapper eventInfoMapper;
@@ -38,18 +42,30 @@ public class EventServiceImpl implements EventService {
         this.eventSignupMapper = eventSignupMapper;
     }
 
+    /**
+     * 用户端活动分页。
+     * 只查询公开活动，并在 SQL 中完成运行状态推导。
+     */
     @Override
     public PageResponse<EventPageVO> getPublicPage(EventPageQueryDTO queryDTO) {
         IPage<EventPageVO> page = eventInfoMapper.selectPublicPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), queryDTO);
         return PageResponse.of(page);
     }
 
+    /**
+     * 管理端活动分页。
+     * 管理员可以看到草稿、已发布、已取消等所有基础状态。
+     */
     @Override
     public PageResponse<EventPageVO> getManagePage(EventPageQueryDTO queryDTO) {
         IPage<EventPageVO> page = eventInfoMapper.selectManagePage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), queryDTO);
         return PageResponse.of(page);
     }
 
+    /**
+     * 活动详情查询。
+     * 对普通用户只允许查看已发布活动；如果当前用户已登录，会额外查询该用户的报名状态。
+     */
     @Override
     public EventDetailVO getDetail(Long eventId, Long currentUserId, boolean isAdmin) {
         EventDetailVO detailVO = eventInfoMapper.selectDetailById(eventId);
@@ -71,6 +87,10 @@ public class EventServiceImpl implements EventService {
         return detailVO;
     }
 
+    /**
+     * 创建活动。
+     * 新活动默认进入草稿状态，后续由管理员显式执行发布。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(EventSaveDTO saveDTO, Long operatorId) {
@@ -81,6 +101,10 @@ public class EventServiceImpl implements EventService {
         return eventInfo.getId();
     }
 
+    /**
+     * 更新活动。
+     * 只有未开始且未取消的活动允许编辑。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(EventSaveDTO saveDTO) {
@@ -97,6 +121,10 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    /**
+     * 删除活动。
+     * 有报名记录的活动不能删除，避免破坏业务历史。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long eventId) {
@@ -110,6 +138,10 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    /**
+     * 发布活动。
+     * 发布前会复用 EventPolicy 中的完整时间和人数规则校验。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long eventId) {
@@ -121,6 +153,10 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    /**
+     * 取消活动。
+     * 这里是业务取消，不会物理删除活动记录。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(Long eventId) {
@@ -131,6 +167,9 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    /**
+     * 读取活动，不存在直接抛异常。
+     */
     private EventInfo requireEvent(Long eventId) {
         EventInfo eventInfo = eventInfoMapper.selectById(eventId);
         if (eventInfo == null) {
@@ -139,6 +178,9 @@ public class EventServiceImpl implements EventService {
         return eventInfo;
     }
 
+    /**
+     * 校验活动分类是否存在且为启用状态。
+     */
     private void checkCategory(Long categoryId) {
         EventCategory category = eventCategoryMapper.selectById(categoryId);
         if (category == null) {

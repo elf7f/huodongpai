@@ -24,6 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/event-category")
+/**
+ * 活动分类接口控制器。
+ * 对外提供公开分类列表，同时为管理员提供分类维护接口。
+ */
 public class EventCategoryController {
 
     private final EventCategoryService eventCategoryService;
@@ -34,6 +38,10 @@ public class EventCategoryController {
         this.tokenService = tokenService;
     }
 
+    /**
+     * 分类列表。
+     * 默认只返回启用分类；当 includeDisabled=true 时，必须由管理员访问。
+     */
     @GetMapping("/list")
     public ApiResponse<List<CategoryVO>> list(@Valid CategoryListQueryDTO queryDTO,
                                               @RequestHeader(value = "Authorization", required = false) String authorization) {
@@ -47,12 +55,18 @@ public class EventCategoryController {
         return ApiResponse.success(eventCategoryService.list(queryDTO, includeDisabled));
     }
 
+    /**
+     * 新增活动分类。
+     */
     @RequireRole(UserRoleEnum.ADMIN)
     @PostMapping("/add")
     public ApiResponse<Long> add(@Valid @RequestBody CategorySaveDTO saveDTO) {
         return ApiResponse.success(eventCategoryService.add(saveDTO));
     }
 
+    /**
+     * 修改活动分类。
+     */
     @RequireRole(UserRoleEnum.ADMIN)
     @PutMapping("/update")
     public ApiResponse<Void> update(@Valid @RequestBody CategorySaveDTO saveDTO) {
@@ -60,6 +74,10 @@ public class EventCategoryController {
         return ApiResponse.success();
     }
 
+    /**
+     * 删除活动分类。
+     * 已被活动引用的分类不允许删除。
+     */
     @RequireRole(UserRoleEnum.ADMIN)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable("id") Long id) {

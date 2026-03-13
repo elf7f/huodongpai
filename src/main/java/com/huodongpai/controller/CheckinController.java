@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/checkin")
 @RequireRole(UserRoleEnum.ADMIN)
+/**
+ * 签到接口控制器。
+ * 仅管理员可访问，用于查看签到名单和执行签到。
+ */
 public class CheckinController {
 
     private final CheckinService checkinService;
@@ -25,11 +29,18 @@ public class CheckinController {
         this.checkinService = checkinService;
     }
 
+    /**
+     * 签到分页列表。
+     * 列表底层基于审核通过名单左连接签到表查询得到。
+     */
     @GetMapping("/page")
     public ApiResponse<PageResponse<CheckinPageVO>> page(@Valid CheckinPageQueryDTO queryDTO) {
         return ApiResponse.success(checkinService.getPage(queryDTO));
     }
 
+    /**
+     * 对某条报名记录执行签到。
+     */
     @PutMapping("/do/{signupId}")
     public ApiResponse<Void> doCheckin(@PathVariable("signupId") Long signupId) {
         checkinService.doCheckin(signupId);

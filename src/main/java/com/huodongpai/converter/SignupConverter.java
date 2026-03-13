@@ -10,6 +10,10 @@ public final class SignupConverter {
     private SignupConverter() {
     }
 
+    /**
+     * 准备报名记录。
+     * 如果是首次报名则创建新实体；如果是重新报名则复用旧实体并覆盖当前状态。
+     */
     public static EventSignup prepareApplyRecord(EventSignup signup,
                                                  Long eventId,
                                                  Long userId,
@@ -29,6 +33,10 @@ public final class SignupConverter {
         return target;
     }
 
+    /**
+     * 报名记录转日志实体。
+     * 日志表负责记录历史行为，供统计和问题追踪使用。
+     */
     public static EventSignupLog toLog(EventSignup signup,
                                        Long operatorId,
                                        SignupOperationTypeEnum operationType,

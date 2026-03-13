@@ -16,6 +16,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+/**
+ * 认证服务实现。
+ * 负责用户名密码登录、查询当前用户信息和退出登录。
+ */
 public class AuthServiceImpl implements AuthService {
 
     private final SysUserMapper sysUserMapper;
@@ -28,6 +32,13 @@ public class AuthServiceImpl implements AuthService {
         this.tokenService = tokenService;
     }
 
+    /**
+     * 登录流程：
+     * 1. 根据用户名查询用户
+     * 2. 校验密码是否匹配
+     * 3. 校验用户状态是否启用
+     * 4. 生成 Token 并组装返回结果
+     */
     @Override
     public LoginVO login(LoginRequestDTO requestDTO) {
         SysUser user = sysUserMapper.selectOne(Wrappers.<SysUser>lambdaQuery()
@@ -42,6 +53,10 @@ public class AuthServiceImpl implements AuthService {
         return AuthConverter.toLoginVO(user, tokenService.createToken(user));
     }
 
+    /**
+     * 获取当前登录用户信息。
+     * 当前用户 ID 由拦截器提前放入 UserContextHolder。
+     */
     @Override
     public CurrentUserVO getCurrentUserInfo() {
         SysUser user = sysUserMapper.selectById(UserContextHolder.getRequired().getId());
@@ -51,6 +66,9 @@ public class AuthServiceImpl implements AuthService {
         return AuthConverter.toCurrentUserVO(user);
     }
 
+    /**
+     * 退出登录时只需要删除当前 Token 对应的 Redis 登录态即可。
+     */
     @Override
     public void logout(String authorization) {
         tokenService.removeToken(authorization);

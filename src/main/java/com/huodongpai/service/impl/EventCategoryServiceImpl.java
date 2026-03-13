@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
+/**
+ * 活动分类服务实现。
+ * 提供分类查询、新增、编辑、删除等能力。
+ */
 public class EventCategoryServiceImpl implements EventCategoryService {
 
     private final EventCategoryMapper eventCategoryMapper;
@@ -27,6 +31,10 @@ public class EventCategoryServiceImpl implements EventCategoryService {
         this.eventInfoMapper = eventInfoMapper;
     }
 
+    /**
+     * 分类列表查询。
+     * includeDisabled=false 时，强制只返回启用状态分类。
+     */
     @Override
     public List<CategoryVO> list(CategoryListQueryDTO queryDTO, boolean includeDisabled) {
         Integer statusFilter = queryDTO.getStatus();
@@ -43,6 +51,10 @@ public class EventCategoryServiceImpl implements EventCategoryService {
                 .toList();
     }
 
+    /**
+     * 新增分类。
+     * 新增前会校验分类名称是否重复。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long add(CategorySaveDTO saveDTO) {
@@ -52,6 +64,9 @@ public class EventCategoryServiceImpl implements EventCategoryService {
         return category.getId();
     }
 
+    /**
+     * 修改分类。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(CategorySaveDTO saveDTO) {
@@ -66,6 +81,10 @@ public class EventCategoryServiceImpl implements EventCategoryService {
         }
     }
 
+    /**
+     * 删除分类。
+     * 如果该分类已被活动引用，则不允许删除。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
@@ -79,6 +98,10 @@ public class EventCategoryServiceImpl implements EventCategoryService {
         }
     }
 
+    /**
+     * 校验分类名称唯一性。
+     * 编辑时通过 excludeId 排除当前记录。
+     */
     private void checkDuplicateName(String categoryName, Long excludeId) {
         long count = eventCategoryMapper.selectCount(Wrappers.<EventCategory>lambdaQuery()
                 .eq(EventCategory::getCategoryName, categoryName.trim())
@@ -88,6 +111,9 @@ public class EventCategoryServiceImpl implements EventCategoryService {
         }
     }
 
+    /**
+     * 获取分类，不存在则直接抛业务异常。
+     */
     private EventCategory requireCategory(Long id) {
         EventCategory category = eventCategoryMapper.selectById(id);
         if (category == null) {

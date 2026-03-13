@@ -15,6 +15,10 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
+/**
+ * 认证拦截器。
+ * 在请求进入 Controller 前统一完成登录校验、角色校验和用户上下文注入。
+ */
 public class AuthInterceptor implements HandlerInterceptor {
 
     private final TokenService tokenService;
@@ -23,6 +27,13 @@ public class AuthInterceptor implements HandlerInterceptor {
         this.tokenService = tokenService;
     }
 
+    /**
+     * 权限拦截主流程：
+     * 1. 判断当前处理器是否为 Controller 方法
+     * 2. 查找方法或类上的权限注解
+     * 3. 如果需要登录，则解析 Token 并注入 UserContextHolder
+     * 4. 如果要求角色，则继续做角色匹配
+     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (!(handler instanceof HandlerMethod handlerMethod)) {
@@ -46,6 +57,9 @@ public class AuthInterceptor implements HandlerInterceptor {
         return true;
     }
 
+    /**
+     * 请求结束时清理用户上下文，避免 ThreadLocal 污染后续请求。
+     */
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         UserContextHolder.clear();

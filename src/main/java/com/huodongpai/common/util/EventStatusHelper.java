@@ -10,6 +10,10 @@ public final class EventStatusHelper {
     private EventStatusHelper() {
     }
 
+    /**
+     * 根据活动基础状态和时间区间推导运行状态。
+     * 运行状态不持久化，避免额外定时任务维护带来的冗余和不一致。
+     */
     public static String resolveRuntimeStatus(EventInfo eventInfo) {
         LocalDateTime now = LocalDateTime.now();
         if (EventBaseStatusEnum.DRAFT.getCode().equals(eventInfo.getStatus())) {

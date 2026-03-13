@@ -22,6 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
+/**
+ * 用户服务实现。
+ * 负责后台用户分页、新增、编辑、启停等操作。
+ */
 public class UserServiceImpl implements UserService {
 
     private final SysUserMapper sysUserMapper;
@@ -32,6 +36,10 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * 用户分页查询。
+     * 支持按关键字、角色、状态筛选。
+     */
     @Override
     public PageResponse<UserPageVO> getPage(UserPageQueryDTO queryDTO) {
         IPage<SysUser> page = sysUserMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
@@ -49,6 +57,10 @@ public class UserServiceImpl implements UserService {
         return PageResponse.of(page.convert(UserConverter::toPageVO));
     }
 
+    /**
+     * 新增用户。
+     * 会统一校验角色合法性和用户名/手机号唯一性。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long add(UserAddDTO addDTO, Long operatorId) {
@@ -59,6 +71,10 @@ public class UserServiceImpl implements UserService {
         return user.getId();
     }
 
+    /**
+     * 编辑用户。
+     * 如果密码为空，表示本次不重置密码。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(UserUpdateDTO updateDTO, Long operatorId) {
@@ -72,6 +88,10 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    /**
+     * 单独修改用户状态。
+     * 主要用于后台的启用/禁用切换。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, UserStatusUpdateDTO updateDTO, Long operatorId) {
@@ -83,10 +103,16 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    /**
+     * 校验角色值是否合法。
+     */
     private void validateRole(String role) {
         UserRoleEnum.fromCode(role);
     }
 
+    /**
+     * 校验用户名和手机号唯一性。
+     */
     private void checkUnique(String username, String phone, Long excludeId) {
         long usernameCount = sysUserMapper.selectCount(Wrappers.<SysUser>lambdaQuery()
                 .eq(SysUser::getUsername, username.trim())
@@ -104,6 +130,9 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    /**
+     * 查询用户，不存在直接抛异常。
+     */
     private SysUser requireUser(Long id) {
         SysUser user = sysUserMapper.selectById(id);
         if (user == null) {
@@ -112,6 +141,13 @@ public class UserServiceImpl implements UserService {
         return user;
     }
 
+    /**
+     * 防止系统进入“没有可用管理员”的状态。
+     * 规则包括：
+     * 1. 当前登录管理员不能禁用自己
+     * 2. 当前登录管理员不能取消自己的管理员身份
+     * 3. 系统至少保留一个启用状态的管理员
+     */
     private void validateAdminRetention(SysUser existingUser, String newRole, Integer newStatus, Long operatorId) {
         boolean wasEnabledAdmin = UserRoleEnum.ADMIN.getCode().equals(existingUser.getRole())
                 && EnableStatusEnum.ENABLED.getCode().equals(existingUser.getStatus());

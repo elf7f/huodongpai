@@ -21,6 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+/**
+ * 签到服务实现。
+ * 负责签到名单分页和对已审核通过报名执行签到。
+ */
 public class CheckinServiceImpl implements CheckinService {
 
     private final EventCheckinMapper eventCheckinMapper;
@@ -35,12 +39,19 @@ public class CheckinServiceImpl implements CheckinService {
         this.eventInfoMapper = eventInfoMapper;
     }
 
+    /**
+     * 签到分页查询。
+     */
     @Override
     public PageResponse<CheckinPageVO> getPage(CheckinPageQueryDTO queryDTO) {
         IPage<CheckinPageVO> page = eventCheckinMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), queryDTO);
         return PageResponse.of(page);
     }
 
+    /**
+     * 执行签到。
+     * 只有审核通过的报名、且活动已开始时才能签到。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void doCheckin(Long signupId) {
@@ -61,6 +72,10 @@ public class CheckinServiceImpl implements CheckinService {
         adjustCheckinCount(signup.getEventId());
     }
 
+    /**
+     * 更新活动签到人数。
+     * 与报名统计一样，通过重试降低乐观锁冲突失败的概率。
+     */
     private void adjustCheckinCount(Long eventId) {
         for (int retry = 0; retry < 3; retry++) {
             EventInfo eventInfo = eventInfoMapper.selectById(eventId);

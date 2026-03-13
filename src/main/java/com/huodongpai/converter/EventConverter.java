@@ -10,6 +10,10 @@ public final class EventConverter {
     private EventConverter() {
     }
 
+    /**
+     * 根据保存 DTO 创建一个新的活动实体。
+     * 新实体默认进入草稿状态，并初始化统计字段。
+     */
     public static EventInfo toNewEntity(EventSaveDTO saveDTO, Long operatorId) {
         EventInfo eventInfo = new EventInfo();
         applySaveDTO(eventInfo, saveDTO);
@@ -22,6 +26,9 @@ public final class EventConverter {
         return eventInfo;
     }
 
+    /**
+     * 把活动表单字段写入实体。
+     */
     public static void applySaveDTO(EventInfo eventInfo, EventSaveDTO saveDTO) {
         eventInfo.setTitle(StringUtils.trimWhitespace(saveDTO.getTitle()));
         eventInfo.setCategoryId(saveDTO.getCategoryId());

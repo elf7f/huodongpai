@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/statistics")
 @RequireRole(UserRoleEnum.ADMIN)
+/**
+ * 统计分析接口。
+ * 主要面向管理员仪表盘、热门活动排行和报名趋势图表。
+ */
 public class StatisticsController {
 
     private final StatisticsService statisticsService;
@@ -26,16 +30,25 @@ public class StatisticsController {
         this.statisticsService = statisticsService;
     }
 
+    /**
+     * 仪表盘总览数据。
+     */
     @GetMapping("/dashboard")
     public ApiResponse<DashboardVO> dashboard() {
         return ApiResponse.success(statisticsService.getDashboard());
     }
 
+    /**
+     * 热门活动排行。
+     */
     @GetMapping("/hot-events")
     public ApiResponse<List<HotEventVO>> hotEvents(@Valid HotEventQueryDTO queryDTO) {
         return ApiResponse.success(statisticsService.getHotEvents(queryDTO));
     }
 
+    /**
+     * 报名趋势统计。
+     */
     @GetMapping("/signup-trend")
     public ApiResponse<List<SignupTrendVO>> signupTrend(@Valid SignupTrendQueryDTO queryDTO) {
         return ApiResponse.success(statisticsService.getSignupTrend(queryDTO));

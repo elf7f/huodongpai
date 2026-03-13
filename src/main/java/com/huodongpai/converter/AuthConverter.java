@@ -9,6 +9,9 @@ public final class AuthConverter {
     private AuthConverter() {
     }
 
+    /**
+     * 用户实体转当前登录用户展示对象。
+     */
     public static CurrentUserVO toCurrentUserVO(SysUser user) {
         CurrentUserVO currentUserVO = new CurrentUserVO();
         currentUserVO.setId(user.getId());
@@ -20,6 +23,9 @@ public final class AuthConverter {
         return currentUserVO;
     }
 
+    /**
+     * 组装登录接口返回对象。
+     */
     public static LoginVO toLoginVO(SysUser user, String token) {
         LoginVO loginVO = new LoginVO();
         loginVO.setToken(token);
