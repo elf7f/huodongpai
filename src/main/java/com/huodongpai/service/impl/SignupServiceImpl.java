@@ -3,13 +3,12 @@ package com.huodongpai.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.huodongpai.common.enums.EnableStatusEnum;
-import com.huodongpai.common.enums.EventBaseStatusEnum;
-import com.huodongpai.common.enums.EventRuntimeStatusEnum;
 import com.huodongpai.common.enums.SignupOperationTypeEnum;
 import com.huodongpai.common.enums.SignupStatusEnum;
+import com.huodongpai.common.policy.SignupPolicy;
 import com.huodongpai.common.result.PageResponse;
-import com.huodongpai.common.util.EventStatusHelper;
+import com.huodongpai.common.util.EventCounterHelper;
+import com.huodongpai.converter.SignupConverter;
 import com.huodongpai.dto.signup.MySignupPageQueryDTO;
 import com.huodongpai.dto.signup.SignupAuditDTO;
 import com.huodongpai.dto.signup.SignupPageQueryDTO;
@@ -56,40 +55,17 @@ public class SignupServiceImpl implements SignupService {
     @Transactional(rollbackFor = Exception.class)
     public void apply(Long eventId, Long userId) {
         SysUser user = sysUserMapper.selectById(userId);
-        if (user == null || !EnableStatusEnum.ENABLED.getCode().equals(user.getStatus())) {
-            throw new BusinessException("当前用户不可报名");
-        }
+        SignupPolicy.ensureApplicantEnabled(user);
         EventInfo eventInfo = requireEvent(eventId);
-        if (!EventBaseStatusEnum.PUBLISHED.getCode().equals(eventInfo.getStatus())) {
-            throw new BusinessException("活动未发布，暂不可报名");
-        }
-        if (!EventRuntimeStatusEnum.SIGNUP_OPEN.getCode().equals(EventStatusHelper.resolveRuntimeStatus(eventInfo))) {
-            throw new BusinessException("当前活动不在报名时间内");
-        }
         EventSignup signup = eventSignupMapper.selectOne(Wrappers.<EventSignup>lambdaQuery()
                 .eq(EventSignup::getEventId, eventId)
                 .eq(EventSignup::getUserId, userId)
                 .last("limit 1"));
-        if (signup != null && (SignupStatusEnum.PENDING.getCode().equals(signup.getStatus())
-                || SignupStatusEnum.APPROVED.getCode().equals(signup.getStatus()))) {
-            throw new BusinessException("请勿重复报名");
-        }
-        String newStatus = eventInfo.getNeedAudit() != null && eventInfo.getNeedAudit() == 1
-                ? SignupStatusEnum.PENDING.getCode()
-                : SignupStatusEnum.APPROVED.getCode();
+        SignupPolicy.ensureSignupAllowed(eventInfo, signup);
+        String newStatus = SignupPolicy.resolveInitialStatus(eventInfo);
         adjustEventCounters(eventInfo.getId(), 1, SignupStatusEnum.APPROVED.getCode().equals(newStatus) ? 1 : 0, 0);
         LocalDateTime now = LocalDateTime.now();
-        if (signup == null) {
-            signup = new EventSignup();
-            signup.setEventId(eventId);
-            signup.setUserId(userId);
-        }
-        signup.setStatus(newStatus);
-        signup.setRemark(null);
-        signup.setSignupTime(now);
-        signup.setAuditTime(null);
-        signup.setAuditBy(null);
-        signup.setCancelTime(null);
+        signup = SignupConverter.prepareApplyRecord(signup, eventId, userId, newStatus, now);
         if (signup.getId() == null) {
             eventSignupMapper.insert(signup);
         } else {
@@ -110,24 +86,12 @@ public class SignupServiceImpl implements SignupService {
     @Transactional(rollbackFor = Exception.class)
     public void cancel(Long signupId, Long userId) {
         EventSignup signup = requireSignup(signupId);
-        if (!signup.getUserId().equals(userId)) {
-            throw new BusinessException("无权取消他人报名");
-        }
-        if (!SignupStatusEnum.PENDING.getCode().equals(signup.getStatus())
-                && !SignupStatusEnum.APPROVED.getCode().equals(signup.getStatus())) {
-            throw new BusinessException("当前报名状态不允许取消");
-        }
         EventInfo eventInfo = requireEvent(signup.getEventId());
-        if (!LocalDateTime.now().isBefore(eventInfo.getStartTime())) {
-            throw new BusinessException("活动开始后不允许取消报名");
-        }
         EventCheckin checkin = eventCheckinMapper.selectOne(Wrappers.<EventCheckin>lambdaQuery()
                 .eq(EventCheckin::getSignupId, signupId)
                 .last("limit 1"));
-        if (checkin != null) {
-            throw new BusinessException("已签到记录不允许取消报名");
-        }
-        int approvedDelta = SignupStatusEnum.APPROVED.getCode().equals(signup.getStatus()) ? -1 : 0;
+        SignupPolicy.ensureCancelable(signup, userId, eventInfo, checkin);
+        int approvedDelta = SignupPolicy.resolveApprovedDeltaWhenCancel(signup);
         signup.setStatus(SignupStatusEnum.CANCELLED.getCode());
         signup.setCancelTime(LocalDateTime.now());
         if (eventSignupMapper.updateById(signup) != 1) {
@@ -191,34 +155,15 @@ public class SignupServiceImpl implements SignupService {
 
     private EventSignup requirePendingSignup(Long signupId) {
         EventSignup signup = requireSignup(signupId);
-        if (!SignupStatusEnum.PENDING.getCode().equals(signup.getStatus())) {
-            throw new BusinessException("当前报名记录不在待审核状态");
-        }
         EventInfo eventInfo = requireEvent(signup.getEventId());
-        if (EventBaseStatusEnum.CANCELLED.getCode().equals(eventInfo.getStatus())) {
-            throw new BusinessException("活动已取消，无法审核");
-        }
+        SignupPolicy.ensurePendingForAudit(signup, eventInfo);
         return signup;
     }
 
     private void adjustEventCounters(Long eventId, int signupDelta, int approvedDelta, int checkinDelta) {
         for (int retry = 0; retry < 3; retry++) {
             EventInfo eventInfo = requireEvent(eventId);
-            int newSignupCount = eventInfo.getSignupCount() + signupDelta;
-            int newApprovedCount = eventInfo.getApprovedCount() + approvedDelta;
-            int newCheckinCount = eventInfo.getCheckinCount() + checkinDelta;
-            if (newSignupCount < 0 || newApprovedCount < 0 || newCheckinCount < 0) {
-                throw new BusinessException("活动统计数据异常");
-            }
-            if (newSignupCount > eventInfo.getMaxParticipants()) {
-                throw new BusinessException("活动报名名额已满");
-            }
-            if (newSignupCount < newApprovedCount || newApprovedCount < newCheckinCount) {
-                throw new BusinessException("活动统计数据异常");
-            }
-            eventInfo.setSignupCount(newSignupCount);
-            eventInfo.setApprovedCount(newApprovedCount);
-            eventInfo.setCheckinCount(newCheckinCount);
+            EventCounterHelper.applyDelta(eventInfo, signupDelta, approvedDelta, checkinDelta);
             if (eventInfoMapper.updateById(eventInfo) == 1) {
                 return;
             }
@@ -231,15 +176,7 @@ public class SignupServiceImpl implements SignupService {
     }
 
     private void saveSignupLog(EventSignup signup, Long operatorId, SignupOperationTypeEnum operationType, String remark) {
-        EventSignupLog signupLog = new EventSignupLog();
-        signupLog.setSignupId(signup.getId());
-        signupLog.setEventId(signup.getEventId());
-        signupLog.setUserId(signup.getUserId());
-        signupLog.setOperationType(operationType.getCode());
-        signupLog.setTargetStatus(signup.getStatus());
-        signupLog.setOperatorId(operatorId);
-        signupLog.setRemark(remark);
-        signupLog.setOperationTime(LocalDateTime.now());
+        EventSignupLog signupLog = SignupConverter.toLog(signup, operatorId, operationType, remark, LocalDateTime.now());
         eventSignupLogMapper.insert(signupLog);
     }
 }

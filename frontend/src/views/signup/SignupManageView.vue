@@ -4,7 +4,9 @@ import { ElMessage } from 'element-plus';
 import { getEventManagePage } from '@/api/event';
 import { auditSignupPass, auditSignupReject, getSignupManagePage } from '@/api/signup';
 import StatusTag from '@/components/StatusTag.vue';
+import { signupStatusOptions } from '@/utils/constants';
 import { formatDateTime } from '@/utils/format';
+import { commonText, successMessages } from '@/utils/ui';
 
 const loading = ref(false);
 const auditVisible = ref(false);
@@ -55,10 +57,10 @@ function openAudit(row, action) {
 async function submitAudit() {
   if (auditAction.value === 'pass') {
     await auditSignupPass(currentRow.value.signupId, auditForm);
-    ElMessage.success('审核通过成功');
+    ElMessage.success(successMessages.signupAuditPass);
   } else {
     await auditSignupReject(currentRow.value.signupId, auditForm);
-    ElMessage.success('审核驳回成功');
+    ElMessage.success(successMessages.signupAuditReject);
   }
   auditVisible.value = false;
   await loadPage();
@@ -83,10 +85,7 @@ onMounted(() => {
         <el-option v-for="item in events" :key="item.id" :label="item.title" :value="item.id" />
       </el-select>
       <el-select v-model="query.status" clearable placeholder="报名状态" style="width: 180px;">
-        <el-option label="待审核" value="pending" />
-        <el-option label="已通过" value="approved" />
-        <el-option label="已驳回" value="rejected" />
-        <el-option label="已取消" value="cancelled" />
+        <el-option v-for="item in signupStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-input v-model="query.keyword" placeholder="活动/用户名/姓名" clearable style="width: 220px;" />
       <el-button type="primary" :loading="loading" @click="query.pageNum = 1; loadPage()">查询</el-button>
@@ -133,9 +132,7 @@ onMounted(() => {
     </el-form>
     <template #footer>
       <el-button @click="auditVisible = false">取消</el-button>
-      <el-button :type="auditAction === 'pass' ? 'success' : 'danger'" @click="submitAudit">
-        确认
-      </el-button>
+      <el-button :type="auditAction === 'pass' ? 'success' : 'danger'" @click="submitAudit">{{ commonText.confirm }}</el-button>
     </template>
   </el-dialog>
 </template>

@@ -1,6 +1,7 @@
 package com.huodongpai.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.huodongpai.converter.EventCategoryConverter;
 import com.huodongpai.dto.category.CategoryListQueryDTO;
 import com.huodongpai.dto.category.CategorySaveDTO;
 import com.huodongpai.entity.EventCategory;
@@ -38,7 +39,7 @@ public class EventCategoryServiceImpl implements EventCategoryService {
                         .orderByAsc(EventCategory::getSortNum)
                         .orderByDesc(EventCategory::getId))
                 .stream()
-                .map(this::toVO)
+                .map(EventCategoryConverter::toVO)
                 .toList();
     }
 
@@ -46,10 +47,7 @@ public class EventCategoryServiceImpl implements EventCategoryService {
     @Transactional(rollbackFor = Exception.class)
     public Long add(CategorySaveDTO saveDTO) {
         checkDuplicateName(saveDTO.getCategoryName(), null);
-        EventCategory category = new EventCategory();
-        category.setCategoryName(saveDTO.getCategoryName().trim());
-        category.setSortNum(saveDTO.getSortNum());
-        category.setStatus(saveDTO.getStatus());
+        EventCategory category = EventCategoryConverter.toEntity(saveDTO);
         eventCategoryMapper.insert(category);
         return category.getId();
     }
@@ -62,9 +60,7 @@ public class EventCategoryServiceImpl implements EventCategoryService {
         }
         EventCategory category = requireCategory(saveDTO.getId());
         checkDuplicateName(saveDTO.getCategoryName(), category.getId());
-        category.setCategoryName(saveDTO.getCategoryName().trim());
-        category.setSortNum(saveDTO.getSortNum());
-        category.setStatus(saveDTO.getStatus());
+        EventCategoryConverter.applySaveDTO(category, saveDTO);
         if (eventCategoryMapper.updateById(category) != 1) {
             throw new BusinessException("分类更新失败，请稍后重试");
         }
@@ -98,16 +94,5 @@ public class EventCategoryServiceImpl implements EventCategoryService {
             throw new BusinessException("分类不存在");
         }
         return category;
-    }
-
-    private CategoryVO toVO(EventCategory category) {
-        CategoryVO categoryVO = new CategoryVO();
-        categoryVO.setId(category.getId());
-        categoryVO.setCategoryName(category.getCategoryName());
-        categoryVO.setSortNum(category.getSortNum());
-        categoryVO.setStatus(category.getStatus());
-        categoryVO.setCreateTime(category.getCreateTime());
-        categoryVO.setUpdateTime(category.getUpdateTime());
-        return categoryVO;
     }
 }

@@ -2,7 +2,10 @@
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { addCategory, deleteCategory, getCategoryList, updateCategory } from '@/api/category';
+import CategoryFormDialog from '@/components/forms/CategoryFormDialog.vue';
 import StatusTag from '@/components/StatusTag.vue';
+import { enableStatusOptions } from '@/utils/constants';
+import { buildDeleteConfirmMessage, dialogTitles, isDialogCancel, successMessages } from '@/utils/ui';
 
 const loading = ref(false);
 const dialogVisible = ref(false);
@@ -53,10 +56,10 @@ function openEdit(row) {
 async function submit() {
   if (isEdit.value) {
     await updateCategory(form);
-    ElMessage.success('分类更新成功');
+    ElMessage.success(successMessages.categoryUpdate);
   } else {
     await addCategory(form);
-    ElMessage.success('分类新增成功');
+    ElMessage.success(successMessages.categoryCreate);
   }
   dialogVisible.value = false;
   await loadList();
@@ -64,14 +67,14 @@ async function submit() {
 
 async function remove(row) {
   try {
-    await ElMessageBox.confirm(`确认删除分类“${row.categoryName}”吗？`, '删除确认', {
+    await ElMessageBox.confirm(buildDeleteConfirmMessage('分类', row.categoryName), dialogTitles.deleteConfirm, {
       type: 'warning'
     });
     await deleteCategory(row.id);
-    ElMessage.success('删除成功');
+    ElMessage.success(successMessages.categoryDelete);
     await loadList();
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') {
+    if (!isDialogCancel(error)) {
       throw error;
     }
   }
@@ -95,8 +98,7 @@ onMounted(() => {
     <div class="page-search">
       <el-input v-model="query.keyword" placeholder="分类名称" clearable style="width: 220px;" />
       <el-select v-model="query.status" placeholder="状态" clearable style="width: 180px;">
-        <el-option label="启用" :value="1" />
-        <el-option label="禁用" :value="0" />
+        <el-option v-for="item in enableStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-button type="primary" :loading="loading" @click="loadList">查询</el-button>
     </div>
@@ -119,26 +121,6 @@ onMounted(() => {
       </el-table-column>
     </el-table>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑分类' : '新增分类'" width="480px">
-      <el-form label-position="top">
-        <el-form-item label="分类名称">
-          <el-input v-model="form.categoryName" />
-        </el-form-item>
-        <el-form-item label="排序值">
-          <el-input-number v-model="form.sortNum" :min="0" style="width: 100%;" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
-      </template>
-    </el-dialog>
+    <CategoryFormDialog v-model:visible="dialogVisible" :is-edit="isEdit" :form="form" @submit="submit" />
   </div>
 </template>

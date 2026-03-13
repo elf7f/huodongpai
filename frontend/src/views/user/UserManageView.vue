@@ -2,8 +2,10 @@
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { addUser, getUserPage, updateUser, updateUserStatus } from '@/api/user';
+import UserFormDialog from '@/components/forms/UserFormDialog.vue';
 import StatusTag from '@/components/StatusTag.vue';
-import { roleOptions } from '@/utils/constants';
+import { enableStatusOptions, roleOptions } from '@/utils/constants';
+import { successMessages } from '@/utils/ui';
 
 const loading = ref(false);
 const dialogVisible = ref(false);
@@ -70,10 +72,10 @@ function openEdit(row) {
 async function submit() {
   if (isEdit.value) {
     await updateUser(form);
-    ElMessage.success('用户更新成功');
+    ElMessage.success(successMessages.userUpdate);
   } else {
     await addUser(form);
-    ElMessage.success('用户新增成功');
+    ElMessage.success(successMessages.userCreate);
   }
   dialogVisible.value = false;
   await loadPage();
@@ -82,7 +84,7 @@ async function submit() {
 async function toggleStatus(row) {
   const nextStatus = row.status === 1 ? 0 : 1;
   await updateUserStatus(row.id, { status: nextStatus });
-  ElMessage.success('状态更新成功');
+  ElMessage.success(successMessages.userStatusUpdate);
   await loadPage();
 }
 
@@ -107,8 +109,7 @@ onMounted(() => {
         <el-option v-for="item in roleOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-select v-model="query.status" clearable placeholder="状态" style="width: 160px;">
-        <el-option label="启用" :value="1" />
-        <el-option label="禁用" :value="0" />
+        <el-option v-for="item in enableStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-button type="primary" :loading="loading" @click="query.pageNum = 1; loadPage()">查询</el-button>
     </div>
@@ -149,38 +150,6 @@ onMounted(() => {
       />
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="520px">
-      <el-form label-position="top">
-        <el-form-item label="用户名">
-          <el-input v-model="form.username" />
-        </el-form-item>
-        <el-form-item :label="isEdit ? '重置密码(可选)' : '密码'">
-          <el-input v-model="form.password" show-password />
-        </el-form-item>
-        <el-form-item label="真实姓名">
-          <el-input v-model="form.realName" />
-        </el-form-item>
-        <el-form-item label="手机号">
-          <el-input v-model="form.phone" />
-        </el-form-item>
-        <el-form-item label="角色">
-          <el-radio-group v-model="form.role">
-            <el-radio value="admin">管理员</el-radio>
-            <el-radio value="user">普通用户</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="form.status">
-            <el-radio :value="1">启用</el-radio>
-            <el-radio :value="0">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
-      </template>
-    </el-dialog>
+    <UserFormDialog v-model:visible="dialogVisible" :is-edit="isEdit" :form="form" @submit="submit" />
   </div>
 </template>

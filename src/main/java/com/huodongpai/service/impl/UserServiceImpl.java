@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huodongpai.common.enums.EnableStatusEnum;
 import com.huodongpai.common.enums.UserRoleEnum;
 import com.huodongpai.common.result.PageResponse;
+import com.huodongpai.converter.UserConverter;
 import com.huodongpai.dto.user.UserAddDTO;
 import com.huodongpai.dto.user.UserPageQueryDTO;
 import com.huodongpai.dto.user.UserStatusUpdateDTO;
@@ -45,7 +46,7 @@ public class UserServiceImpl implements UserService {
                         .eq(queryDTO.getStatus() != null, SysUser::getStatus, queryDTO.getStatus())
                         .orderByDesc(SysUser::getCreateTime)
                         .orderByDesc(SysUser::getId));
-        return PageResponse.of(page.convert(this::toVO));
+        return PageResponse.of(page.convert(UserConverter::toPageVO));
     }
 
     @Override
@@ -53,13 +54,7 @@ public class UserServiceImpl implements UserService {
     public Long add(UserAddDTO addDTO, Long operatorId) {
         validateRole(addDTO.getRole());
         checkUnique(addDTO.getUsername(), addDTO.getPhone(), null);
-        SysUser user = new SysUser();
-        user.setUsername(addDTO.getUsername().trim());
-        user.setPassword(passwordEncoder.encode(addDTO.getPassword()));
-        user.setRealName(addDTO.getRealName().trim());
-        user.setPhone(addDTO.getPhone());
-        user.setRole(addDTO.getRole());
-        user.setStatus(addDTO.getStatus() == null ? EnableStatusEnum.ENABLED.getCode() : addDTO.getStatus());
+        SysUser user = UserConverter.toEntity(addDTO, passwordEncoder);
         sysUserMapper.insert(user);
         return user.getId();
     }
@@ -71,14 +66,7 @@ public class UserServiceImpl implements UserService {
         SysUser user = requireUser(updateDTO.getId());
         validateAdminRetention(user, updateDTO.getRole(), updateDTO.getStatus(), operatorId);
         checkUnique(updateDTO.getUsername(), updateDTO.getPhone(), user.getId());
-        user.setUsername(updateDTO.getUsername().trim());
-        if (StringUtils.hasText(updateDTO.getPassword())) {
-            user.setPassword(passwordEncoder.encode(updateDTO.getPassword()));
-        }
-        user.setRealName(updateDTO.getRealName().trim());
-        user.setPhone(updateDTO.getPhone());
-        user.setRole(updateDTO.getRole());
-        user.setStatus(updateDTO.getStatus());
+        UserConverter.applyUpdate(user, updateDTO, passwordEncoder);
         if (sysUserMapper.updateById(user) != 1) {
             throw new BusinessException("用户更新失败，请稍后重试");
         }
@@ -141,18 +129,5 @@ public class UserServiceImpl implements UserService {
         if (enabledAdminCount <= 1) {
             throw new BusinessException("系统至少需要保留一个启用状态的管理员");
         }
-    }
-
-    private UserPageVO toVO(SysUser user) {
-        UserPageVO userPageVO = new UserPageVO();
-        userPageVO.setId(user.getId());
-        userPageVO.setUsername(user.getUsername());
-        userPageVO.setRealName(user.getRealName());
-        userPageVO.setPhone(user.getPhone());
-        userPageVO.setRole(user.getRole());
-        userPageVO.setStatus(user.getStatus());
-        userPageVO.setCreateTime(user.getCreateTime());
-        userPageVO.setUpdateTime(user.getUpdateTime());
-        return userPageVO;
     }
 }

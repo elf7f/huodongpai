@@ -3,6 +3,7 @@ package com.huodongpai.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.huodongpai.common.context.UserContextHolder;
 import com.huodongpai.common.enums.EnableStatusEnum;
+import com.huodongpai.converter.AuthConverter;
 import com.huodongpai.dto.auth.LoginRequestDTO;
 import com.huodongpai.entity.SysUser;
 import com.huodongpai.exception.BusinessException;
@@ -38,10 +39,7 @@ public class AuthServiceImpl implements AuthService {
         if (!EnableStatusEnum.ENABLED.getCode().equals(user.getStatus())) {
             throw new BusinessException("当前账号已被禁用");
         }
-        LoginVO loginVO = new LoginVO();
-        loginVO.setToken(tokenService.createToken(user));
-        loginVO.setUserInfo(toCurrentUserVO(user));
-        return loginVO;
+        return AuthConverter.toLoginVO(user, tokenService.createToken(user));
     }
 
     @Override
@@ -50,22 +48,11 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new BusinessException("用户不存在");
         }
-        return toCurrentUserVO(user);
+        return AuthConverter.toCurrentUserVO(user);
     }
 
     @Override
     public void logout(String authorization) {
         tokenService.removeToken(authorization);
-    }
-
-    private CurrentUserVO toCurrentUserVO(SysUser user) {
-        CurrentUserVO currentUserVO = new CurrentUserVO();
-        currentUserVO.setId(user.getId());
-        currentUserVO.setUsername(user.getUsername());
-        currentUserVO.setRealName(user.getRealName());
-        currentUserVO.setPhone(user.getPhone());
-        currentUserVO.setRole(user.getRole());
-        currentUserVO.setStatus(user.getStatus());
-        return currentUserVO;
     }
 }

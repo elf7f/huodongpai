@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import { useAuthStore } from '@/store/auth';
+import { buildLogoutConfirmMessage, dialogTitles, isDialogCancel } from '@/utils/ui';
 
 const route = useRoute();
 const router = useRouter();
@@ -39,13 +40,13 @@ function navigate(path) {
 
 async function handleLogout() {
   try {
-    await ElMessageBox.confirm('确认退出当前登录账号吗？', '退出登录', {
+    await ElMessageBox.confirm(buildLogoutConfirmMessage(), dialogTitles.logout, {
       type: 'warning'
     });
     await authStore.handleLogout();
     router.replace('/login');
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') {
+    if (!isDialogCancel(error)) {
       throw error;
     }
   }

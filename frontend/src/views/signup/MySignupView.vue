@@ -3,7 +3,9 @@ import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { cancelSignup, getMySignupPage } from '@/api/signup';
 import StatusTag from '@/components/StatusTag.vue';
+import { signupStatusOptions } from '@/utils/constants';
 import { formatDateTime } from '@/utils/format';
+import { buildCancelSignupConfirmMessage, dialogTitles, isDialogCancel, successMessages } from '@/utils/ui';
 
 const loading = ref(false);
 const query = reactive({
@@ -31,12 +33,12 @@ async function loadPage() {
 
 async function handleCancel(row) {
   try {
-    await ElMessageBox.confirm(`确认取消报名“${row.eventTitle}”吗？`, '取消报名', { type: 'warning' });
+    await ElMessageBox.confirm(buildCancelSignupConfirmMessage(row.eventTitle), dialogTitles.cancelSignup, { type: 'warning' });
     await cancelSignup(row.signupId);
-    ElMessage.success('取消报名成功');
+    ElMessage.success(successMessages.signupCancel);
     await loadPage();
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') {
+    if (!isDialogCancel(error)) {
       throw error;
     }
   }
@@ -59,10 +61,7 @@ onMounted(() => {
     <div class="page-search">
       <el-input v-model="query.keyword" placeholder="活动标题" clearable style="width: 220px;" />
       <el-select v-model="query.status" clearable placeholder="报名状态" style="width: 180px;">
-        <el-option label="待审核" value="pending" />
-        <el-option label="已通过" value="approved" />
-        <el-option label="已驳回" value="rejected" />
-        <el-option label="已取消" value="cancelled" />
+        <el-option v-for="item in signupStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-button type="primary" :loading="loading" @click="query.pageNum = 1; loadPage()">查询</el-button>
     </div>

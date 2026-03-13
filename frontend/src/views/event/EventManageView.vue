@@ -11,8 +11,11 @@ import {
   updateEvent
 } from '@/api/event';
 import { getCategoryList } from '@/api/category';
+import EventFormDialog from '@/components/forms/EventFormDialog.vue';
 import StatusTag from '@/components/StatusTag.vue';
+import { eventBaseStatusOptions, eventRuntimeFilterOptions } from '@/utils/constants';
 import { formatDateTime } from '@/utils/format';
+import { buildDeleteConfirmMessage, dialogTitles, isDialogCancel, successMessages } from '@/utils/ui';
 
 const loading = ref(false);
 const dialogVisible = ref(false);
@@ -104,10 +107,10 @@ async function showDetail(id) {
 async function submit() {
   if (isEdit.value) {
     await updateEvent(form);
-    ElMessage.success('活动更新成功');
+    ElMessage.success(successMessages.eventUpdate);
   } else {
     await addEvent(form);
-    ElMessage.success('活动新增成功');
+    ElMessage.success(successMessages.eventCreate);
   }
   dialogVisible.value = false;
   await loadPage();
@@ -115,24 +118,24 @@ async function submit() {
 
 async function handlePublish(row) {
   await publishEvent(row.id);
-  ElMessage.success('活动发布成功');
+  ElMessage.success(successMessages.eventPublish);
   await loadPage();
 }
 
 async function handleCancel(row) {
   await cancelEvent(row.id);
-  ElMessage.success('活动取消成功');
+  ElMessage.success(successMessages.eventCancel);
   await loadPage();
 }
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm(`确认删除活动“${row.title}”吗？`, '删除确认', { type: 'warning' });
+    await ElMessageBox.confirm(buildDeleteConfirmMessage('活动', row.title), dialogTitles.deleteConfirm, { type: 'warning' });
     await deleteEvent(row.id);
-    ElMessage.success('活动删除成功');
+    ElMessage.success(successMessages.eventDelete);
     await loadPage();
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') {
+    if (!isDialogCancel(error)) {
       throw error;
     }
   }
@@ -159,15 +162,10 @@ onMounted(() => {
         <el-option v-for="item in categories" :key="item.id" :label="item.categoryName" :value="item.id" />
       </el-select>
       <el-select v-model="query.baseStatus" clearable placeholder="基础状态" style="width: 180px;">
-        <el-option label="草稿" value="draft" />
-        <el-option label="已发布" value="published" />
-        <el-option label="已取消" value="cancelled" />
+        <el-option v-for="item in eventBaseStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-select v-model="query.runtimeStatus" clearable placeholder="运行状态" style="width: 180px;">
-        <el-option label="报名中" value="signup_open" />
-        <el-option label="报名结束" value="signup_closed" />
-        <el-option label="进行中" value="ongoing" />
-        <el-option label="已结束" value="finished" />
+        <el-option v-for="item in eventRuntimeFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-button type="primary" :loading="loading" @click="query.pageNum = 1; loadPage()">查询</el-button>
     </div>
@@ -213,66 +211,13 @@ onMounted(() => {
     </div>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑活动' : '新增活动'" width="760px">
-    <el-form label-position="top">
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <el-form-item label="活动标题"><el-input v-model="form.title" /></el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="活动分类">
-            <el-select v-model="form.categoryId" style="width: 100%;">
-              <el-option v-for="item in categories" :key="item.id" :label="item.categoryName" :value="item.id" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="活动地点"><el-input v-model="form.location" /></el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="封面地址"><el-input v-model="form.coverUrl" /></el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="开始时间">
-            <el-date-picker v-model="form.startTime" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" style="width: 100%;" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="结束时间">
-            <el-date-picker v-model="form.endTime" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" style="width: 100%;" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="报名截止时间">
-            <el-date-picker v-model="form.signupDeadline" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" style="width: 100%;" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="最大报名人数">
-            <el-input-number v-model="form.maxParticipants" :min="1" style="width: 100%;" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="24">
-          <el-form-item label="是否需要审核">
-            <el-radio-group v-model="form.needAudit">
-              <el-radio :value="1">需要审核</el-radio>
-              <el-radio :value="0">无需审核</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-col>
-        <el-col :span="24">
-          <el-form-item label="活动详情">
-            <el-input v-model="form.description" type="textarea" :rows="5" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-    </el-form>
-
-    <template #footer>
-      <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="submit">保存</el-button>
-    </template>
-  </el-dialog>
+  <EventFormDialog
+    v-model:visible="dialogVisible"
+    :is-edit="isEdit"
+    :form="form"
+    :categories="categories"
+    @submit="submit"
+  />
 
   <el-drawer v-model="detailVisible" title="活动详情" size="48%">
     <template v-if="detail">

@@ -5,7 +5,9 @@ import { getCategoryList } from '@/api/category';
 import { applySignup } from '@/api/signup';
 import { getEventDetail, getEventPage } from '@/api/event';
 import StatusTag from '@/components/StatusTag.vue';
+import { eventRuntimeFilterOptions } from '@/utils/constants';
 import { formatDateTime } from '@/utils/format';
+import { successMessages } from '@/utils/ui';
 
 const loading = ref(false);
 const detailVisible = ref(false);
@@ -54,7 +56,7 @@ async function showDetail(id) {
 
 async function handleApply(id) {
   await applySignup(id);
-  ElMessage.success('报名成功');
+  ElMessage.success(successMessages.signupApply);
   await Promise.all([loadPage(), showDetail(id)]);
 }
 
@@ -78,10 +80,7 @@ onMounted(() => {
         <el-option v-for="item in categories" :key="item.id" :label="item.categoryName" :value="item.id" />
       </el-select>
       <el-select v-model="query.runtimeStatus" clearable placeholder="活动状态" style="width: 180px;">
-        <el-option label="报名中" value="signup_open" />
-        <el-option label="报名结束" value="signup_closed" />
-        <el-option label="进行中" value="ongoing" />
-        <el-option label="已结束" value="finished" />
+        <el-option v-for="item in eventRuntimeFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-button type="primary" :loading="loading" @click="query.pageNum = 1; loadPage()">查询</el-button>
     </div>

@@ -4,7 +4,9 @@ import { ElMessage } from 'element-plus';
 import { doCheckin, getCheckinPage } from '@/api/checkin';
 import { getEventManagePage } from '@/api/event';
 import StatusTag from '@/components/StatusTag.vue';
+import { checkinStatusOptions } from '@/utils/constants';
 import { formatDateTime } from '@/utils/format';
+import { successMessages } from '@/utils/ui';
 
 const loading = ref(false);
 const events = ref([]);
@@ -40,7 +42,7 @@ async function loadPage() {
 
 async function handleCheckin(row) {
   await doCheckin(row.signupId);
-  ElMessage.success('签到成功');
+  ElMessage.success(successMessages.checkin);
   await loadPage();
 }
 
@@ -64,8 +66,7 @@ onMounted(() => {
       </el-select>
       <el-input v-model="query.keyword" placeholder="活动/用户名/姓名" clearable style="width: 220px;" />
       <el-select v-model="query.checkinStatus" clearable placeholder="签到状态" style="width: 180px;">
-        <el-option label="未签到" :value="0" />
-        <el-option label="已签到" :value="1" />
+        <el-option v-for="item in checkinStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
       <el-button type="primary" :loading="loading" @click="query.pageNum = 1; loadPage()">查询</el-button>
     </div>

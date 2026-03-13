@@ -3,39 +3,35 @@
 [English](README_EN.md) | [中文](README.md)
 
 Huodongpai is an event registration and check-in management system for lectures, training sessions, competitions, salons, campus activities, and small conferences.  
-The project uses a **Spring Boot monolithic backend + Vue 3 frontend** and covers the full business flow of event publishing, registration, approval, on-site check-in, and statistics.
+It uses a `Spring Boot` monolithic backend and a `Vue 3` frontend, covering the full business flow of event publishing, registration, approval, on-site check-in, and statistics.
 
 ## Features
 
 - Create, edit, publish, cancel, and delete events
 - Online registration with capacity control
-- Registration approval workflow
+- Registration cancellation and approval workflow
 - On-site attendee check-in
 - Dashboard, hot events, and signup trend statistics
-- JWT + Redis based authentication
-- MySQL persistence
+- `JWT + Redis` authentication
+- `MySQL` persistence
 - Ready-to-import Postman collection
-- Docker Compose for local MySQL and Redis only
 
 ## Tech Stack
 
-### Backend
+**Backend**
+- `Spring Boot 3`
+- `MyBatis-Plus`
+- `MySQL 8`
+- `Redis 7`
+- `JWT`
 
-- Spring Boot 3
-- MyBatis-Plus
-- MySQL 8
-- Redis 7
-- JWT
-- Lombok
-
-### Frontend
-
-- Vue 3
-- Vite
-- Element Plus
-- Axios
-- Vue Router
-- Pinia
+**Frontend**
+- `Vue 3`
+- `Vite`
+- `Element Plus`
+- `Axios`
+- `Vue Router`
+- `Pinia`
 
 ## Project Structure
 
@@ -44,24 +40,21 @@ huodongpai
 ├── src                         # Spring Boot backend
 ├── frontend                    # Vue 3 frontend
 ├── sql                         # schema and seed scripts
-├── docs                        # design and usage docs
+├── docs                        # supplemental docs
 ├── postman                     # Postman collection and environment
-└── docker-compose.yml          # local MySQL/Redis infrastructure
+└── docker-compose.yml          # local MySQL / Redis infrastructure
 ```
 
 ## Modules
 
-### User Side
-
+**User Side**
 - Login
-- Event list
-- Event detail
+- Event list / detail
 - Apply for an event
 - My registrations
 - Cancel registration
 
-### Admin Side
-
+**Admin Side**
 - Dashboard
 - User management
 - Event category management
@@ -70,96 +63,83 @@ huodongpai
 - Check-in management
 - Statistics
 
-## Core Status Model
+## Status Model
 
-### Event Base Status
+**Event Base Status**
+- `draft`
+- `published`
+- `cancelled`
 
-- `draft`: draft
-- `published`: published
-- `cancelled`: cancelled
+**Event Runtime Status**
+- `signup_open`
+- `signup_closed`
+- `ongoing`
+- `finished`
 
-### Event Runtime Status
-
-- `signup_open`: open for signup
-- `signup_closed`: signup closed
-- `ongoing`: ongoing
-- `finished`: finished
-
-### Signup Status
-
-- `pending`: pending approval
-- `approved`: approved
-- `rejected`: rejected
-- `cancelled`: cancelled
+**Signup Status**
+- `pending`
+- `approved`
+- `rejected`
+- `cancelled`
 
 ## Default Test Accounts
 
 - Admin: `admin / 123456`
 - User: `test01 / 123456`
 
-See `sql/02_huodongpai_seed.sql` for seed data.
+Seed data lives in `sql/02_huodongpai_seed.sql`, with extra notes in `docs/init-data.md`.
 
 ## Local Startup
 
-### 0. Environment Variables
+### 1. Prerequisites
 
-Copy the template:
+- `JDK 17`
+- `Maven 3.9+`
+- `Node.js 20+`
+- `Docker / Docker Compose` for `MySQL` and `Redis` only
+
+### 2. Copy environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Notes:
+Common variables:
+- `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD`
+- `REDIS_HOST` / `REDIS_PORT` / `REDIS_DATABASE` / `REDIS_PASSWORD`
+- `JWT_SECRET`
+- `SERVER_PORT`
 
-- `docker compose` reads the root `.env` automatically
-- the backend can reuse the same `.env` when started locally
-
-### 1. Prerequisites
-
-- JDK 17
-- Maven 3.9+
-- Node.js 20+
-- Docker / Docker Compose for MySQL and Redis only
-
-### 2. Start MySQL and Redis
+### 3. Start MySQL and Redis
 
 ```bash
-cp .env.example .env
 docker compose up -d
 ```
 
 Default ports:
+- `MySQL: 127.0.0.1:3306`
+- `Redis: 127.0.0.1:6379`
 
-- MySQL: `127.0.0.1:3306`
-- Redis: `127.0.0.1:6379`
-
-### 3. Initialize the Database
-
-On the first `docker compose up -d`, MySQL automatically loads the scripts under `sql/`:
-
+On the first startup, MySQL loads:
 - `sql/01_huodongpai_schema.sql`
 - `sql/02_huodongpai_seed.sql`
 
-Both scripts explicitly use `utf8mb4` client encoding to avoid garbled Chinese seed data.
-
-If you already started MySQL before and kept the volume, reset the volume and initialize again:
+To reset old volumes and reinitialize:
 
 ```bash
 docker compose down -v
 docker compose up -d
 ```
 
-### 4. Start the Backend
+### 4. Start backend
 
 ```bash
 mvn spring-boot:run
 ```
 
-Backend URL:
+Backend URL: `http://localhost:8080`
 
-- `http://localhost:8080`
-
-### 5. Start the Frontend
+### 5. Start frontend
 
 ```bash
 cd frontend
@@ -167,86 +147,15 @@ npm install
 npm run dev
 ```
 
-Frontend URL:
-
-- `http://localhost:5173`
-
-## Docker Compose Scope
-
-Docker Compose is used only for:
-
-- MySQL
-- Redis
-
-### Start
-
-```bash
-cp .env.example .env
-docker compose up -d
-```
-
-### Stop
-
-```bash
-docker compose down
-```
-
-To remove MySQL and Redis volumes as well:
-
-```bash
-docker compose down -v
-```
-
-## Environment Variables
-
-Template file:
-
-- `.env.example`
-
-Common variables:
-
-- `MYSQL_ROOT_PASSWORD`: MySQL root password
-- `MYSQL_DATABASE`: initial database name
-- `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD`: backend database connection
-- `REDIS_HOST` / `REDIS_PORT` / `REDIS_DATABASE` / `REDIS_PASSWORD`: Redis connection
-- `JWT_SECRET`: JWT signing secret
-- `SERVER_PORT`: backend server port
-
-## Runtime Notes
-
-### MySQL
-
-- Service name: `mysql`
-- Container name: `huodongpai-mysql`
-- Volume: `mysql-data`
-- Init directory: `./sql`
-
-### Redis
-
-- Service name: `redis`
-- Container name: `huodongpai-redis`
-- Volume: `redis-data`
-
-### Backend
-
-- Runs locally with `mvn spring-boot:run`
-- Default port: `8080`
-
-### Frontend
-
-- Runs locally with `cd frontend && npm run dev`
-- Default port: `5173`
+Frontend URL: `http://localhost:5173`
 
 ## API Testing
 
 Provided Postman files:
-
 - Collection: `postman/huodongpai.postman_collection.json`
 - Environment: `postman/huodongpai.local.postman_environment.json`
 
-Usage:
-
-- `docs/postman-usage.md`
+See `docs/postman-usage.md` for import and variable notes.
 
 ## Documentation
 
@@ -257,15 +166,13 @@ Usage:
 
 ## Current Scope
 
-Completed:
-
+**Completed**
 - Core backend business APIs
 - Admin and user frontend pages
-- Docker Compose based local infrastructure
+- `Docker Compose` based local infrastructure
 - Postman collection
 
-Not included yet:
-
+**Not included yet**
 - QR code check-in
 - SMS / email notifications
 - Payment

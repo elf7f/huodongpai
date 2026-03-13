@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huodongpai.common.enums.EnableStatusEnum;
 import com.huodongpai.common.enums.EventBaseStatusEnum;
+import com.huodongpai.common.policy.EventPolicy;
+import com.huodongpai.converter.EventConverter;
 import com.huodongpai.common.result.PageResponse;
 import com.huodongpai.dto.event.EventPageQueryDTO;
 import com.huodongpai.dto.event.EventSaveDTO;
@@ -18,10 +20,8 @@ import com.huodongpai.mapper.EventSignupMapper;
 import com.huodongpai.service.EventService;
 import com.huodongpai.vo.event.EventDetailVO;
 import com.huodongpai.vo.event.EventPageVO;
-import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 @Service
 public class EventServiceImpl implements EventService {
@@ -74,16 +74,9 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(EventSaveDTO saveDTO, Long operatorId) {
-        validateEventSaveDTO(saveDTO);
+        EventPolicy.validateSaveRequest(saveDTO);
         checkCategory(saveDTO.getCategoryId());
-        EventInfo eventInfo = new EventInfo();
-        fillEventInfo(eventInfo, saveDTO);
-        eventInfo.setStatus(EventBaseStatusEnum.DRAFT.getCode());
-        eventInfo.setSignupCount(0);
-        eventInfo.setApprovedCount(0);
-        eventInfo.setCheckinCount(0);
-        eventInfo.setCreateBy(operatorId);
-        eventInfo.setVersion(0);
+        EventInfo eventInfo = EventConverter.toNewEntity(saveDTO, operatorId);
         eventInfoMapper.insert(eventInfo);
         return eventInfo.getId();
     }
@@ -94,16 +87,11 @@ public class EventServiceImpl implements EventService {
         if (saveDTO.getId() == null) {
             throw new BusinessException("活动ID不能为空");
         }
-        validateEventSaveDTO(saveDTO);
+        EventPolicy.validateSaveRequest(saveDTO);
         checkCategory(saveDTO.getCategoryId());
         EventInfo eventInfo = requireEvent(saveDTO.getId());
-        if (EventBaseStatusEnum.CANCELLED.getCode().equals(eventInfo.getStatus())) {
-            throw new BusinessException("已取消的活动不允许编辑");
-        }
-        if (!LocalDateTime.now().isBefore(eventInfo.getStartTime())) {
-            throw new BusinessException("活动开始后不允许编辑");
-        }
-        fillEventInfo(eventInfo, saveDTO);
+        EventPolicy.ensureEditable(eventInfo);
+        EventConverter.applySaveDTO(eventInfo, saveDTO);
         if (eventInfoMapper.updateById(eventInfo) != 1) {
             throw new BusinessException("活动更新失败，请稍后重试");
         }
@@ -126,10 +114,7 @@ public class EventServiceImpl implements EventService {
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long eventId) {
         EventInfo eventInfo = requireEvent(eventId);
-        if (EventBaseStatusEnum.CANCELLED.getCode().equals(eventInfo.getStatus())) {
-            throw new BusinessException("已取消的活动不允许发布");
-        }
-        validateEventEntity(eventInfo);
+        EventPolicy.ensurePublishable(eventInfo);
         eventInfo.setStatus(EventBaseStatusEnum.PUBLISHED.getCode());
         if (eventInfoMapper.updateById(eventInfo) != 1) {
             throw new BusinessException("活动发布失败，请稍后重试");
@@ -162,48 +147,5 @@ public class EventServiceImpl implements EventService {
         if (!EnableStatusEnum.ENABLED.getCode().equals(category.getStatus())) {
             throw new BusinessException("活动分类已停用");
         }
-    }
-
-    private void validateEventSaveDTO(EventSaveDTO saveDTO) {
-        if (saveDTO.getStartTime().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("活动开始时间必须晚于当前时间");
-        }
-        if (!saveDTO.getSignupDeadline().isBefore(saveDTO.getStartTime())) {
-            throw new BusinessException("报名截止时间必须早于活动开始时间");
-        }
-        if (!saveDTO.getEndTime().isAfter(saveDTO.getStartTime())) {
-            throw new BusinessException("活动结束时间必须晚于开始时间");
-        }
-    }
-
-    private void validateEventEntity(EventInfo eventInfo) {
-        if (!StringUtils.hasText(eventInfo.getTitle())) {
-            throw new BusinessException("活动标题不能为空");
-        }
-        if (eventInfo.getMaxParticipants() == null || eventInfo.getMaxParticipants() <= 0) {
-            throw new BusinessException("最大报名人数必须大于0");
-        }
-        if (eventInfo.getStartTime() == null || eventInfo.getStartTime().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("活动开始时间必须晚于当前时间");
-        }
-        if (eventInfo.getEndTime() == null || !eventInfo.getEndTime().isAfter(eventInfo.getStartTime())) {
-            throw new BusinessException("活动结束时间必须晚于开始时间");
-        }
-        if (eventInfo.getSignupDeadline() == null || !eventInfo.getSignupDeadline().isBefore(eventInfo.getStartTime())) {
-            throw new BusinessException("报名截止时间必须早于活动开始时间");
-        }
-    }
-
-    private void fillEventInfo(EventInfo eventInfo, EventSaveDTO saveDTO) {
-        eventInfo.setTitle(saveDTO.getTitle());
-        eventInfo.setCategoryId(saveDTO.getCategoryId());
-        eventInfo.setCoverUrl(saveDTO.getCoverUrl());
-        eventInfo.setLocation(saveDTO.getLocation());
-        eventInfo.setStartTime(saveDTO.getStartTime());
-        eventInfo.setEndTime(saveDTO.getEndTime());
-        eventInfo.setSignupDeadline(saveDTO.getSignupDeadline());
-        eventInfo.setMaxParticipants(saveDTO.getMaxParticipants());
-        eventInfo.setNeedAudit(saveDTO.getNeedAudit());
-        eventInfo.setDescription(saveDTO.getDescription());
     }
 }

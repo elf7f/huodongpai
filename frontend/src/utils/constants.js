@@ -23,6 +23,10 @@ export const eventRuntimeStatusOptions = [
   { label: '草稿', value: 'draft' }
 ];
 
+export const eventRuntimeFilterOptions = eventRuntimeStatusOptions.filter(
+  (item) => !['cancelled', 'draft'].includes(item.value)
+);
+
 export const signupStatusOptions = [
   { label: '待审核', value: 'pending' },
   { label: '已通过', value: 'approved' },

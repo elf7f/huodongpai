@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/store/auth';
+import { successMessages } from '@/utils/ui';
 
 const route = useRoute();
 const router = useRouter();
@@ -18,7 +19,7 @@ async function handleLogin() {
   loading.value = true;
   try {
     await authStore.handleLogin(form);
-    ElMessage.success('登录成功');
+    ElMessage.success(successMessages.login);
     const redirect = route.query.redirect;
     router.replace(redirect || (authStore.isAdmin ? '/dashboard' : '/events'));
   } catch (error) {
